@@ -72,7 +72,6 @@
       
     </style>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-    <script type="text/javascript" src="touchswipe.js"></script>
 </head>
 
 <body>
@@ -99,7 +98,26 @@
             	<tr>
                 	<td>Tile Colour</td>
                     <td><select id="panel-colour"></select></td>
-                </tr>                                
+                </tr> 
+            	<tr>
+                	<td>Special Tile</td>
+                    <td>
+                    	<select id="panel-special"></select>
+                    	<select id="panel-special-iteration">
+                        	<option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>                            
+                            <option value="10">10</option>                                                        
+                        </select>
+                    </td>
+                </tr>                                                
             </table>
             <button id="resetMap">Reset Map</button>
             <hr>
@@ -117,12 +135,17 @@
 			var baseTiles = 10;
 			var	baseRows = 10;
 			
-			var tileColours = new Array('grey','black','orange','red','pink','darkgreen','yellow','lightgreen','lightblue','teal','darkblue'); 
+			var tileColours = new Array('grey','black','orange','red','pink','darkgreen','yellow','lightgreen','lightblue','teal','darkblue');
+			var tileSpecials = new Array('','lock','key','door','teleport');			 
 
 			//BUILD INTERFACE
 			for (i = 0; i < tileColours.length; i++) {
 				$('#panel-colour').append('<option value="'+tileColours[i]+'">'+tileColours[i]+'</option>');
 			}
+			
+			for (i = 0; i < tileSpecials.length; i++) {
+				$('#panel-special').append('<option value="'+tileSpecials[i]+'">'+tileSpecials[i]+'</option>');
+			}			
 			
 			//LOAD BASIC MAP
 			createBase(baseRows, baseTiles);
@@ -135,6 +158,10 @@
 				}
 				
 				$(this).addClass($('#panel-colour').val());
+				
+				if($('#panel-special').val() != ''){
+					$(this).html($('#panel-special').val() + $('#panel-special-iteration').val());	
+				}
 			});
 			
 			
@@ -176,9 +203,9 @@
 				//LOOP THROUGH COLUMNS
 				for (t = 0; t < tiles; t++) {
 					//ADD TILE TO GAME PANEL
-					$('#r' + r).append('<div id="t'+t+'" class="tile">'+t+'</div>');
+					$('#r' + r).append('<div id="r'+r+'-t'+t+'" class="tile">'+''+'</div>');
 					//ADD BASE COLOUR TO TILE
-					$('#t'+t).addClass(defaultTileColour)
+					$('#r'+r+'-t'+t).addClass(defaultTileColour)
 				}
 				//CLOSE ROW DIV
 				$('#gamepanel').append('</div>');
@@ -208,9 +235,12 @@
 					if(colour == ''){colour = 'grey'};
 					
 					colour = colour.trim();
+					
+					//GET THE ACTION
+					var action = $(this).html();					
 									
 					//BUILD JSON FOR TILE
-					jsonString += '{"name":"tile-'+index+'","colour":"'+colour+'"}, \n';	
+					jsonString += '{"name":"tile-'+index+'","colour":"'+colour+'","action":"'+action+'"}, \n';	
 				});
 				//END JSON FOR ROW
 				jsonString += '] \n }, \n';
