@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
+    <title>Map</title>
+
+	<style type="text/css">
+    
+        html,body{
+            padding:0;
+            margin:0;
+            width:100%;
+            height:100%;
+			position:relative;
+        }
+		
+		/*ADMIN*/
+		.content{
+			padding:20px;
+		}
+		
+		#gamepanel{
+			background:#000;
+			display:block;
+			width:75%;
+			height:100%;
+			margin-right:25%;
+		}
+		
+		#controlpanel{
+			display:block;
+			position:absolute;
+			top:0;
+			right:0;
+			width:25%;
+			height:100%;			
+		}
+		
+		
+		.row{
+			display:table;
+			clear:both;
+			background:#333;
+		}
+		.tile{
+			display:table-cell;
+			float:left;
+			text-align:center;
+			vertical-align:middle;
+			width:20px;
+			height:20px;
+			background:#CCC;
+			border:1px SOLID #FFF;
+			cursor:pointer;
+		}
+		.tile:hover{
+			border-color:#0F0;
+		}
+		
+		.black{background-color:#000;}
+		.grey{background-color:#606060;}
+		.orange{background-color:#e39030;}
+		.red{background-color:#d2523c;}
+		.pink{background-color:#c43967;}
+		.darkgreen{background-color:#466e2c;}
+		.yellow{background-color:#d2ca28;}
+		.lightgreen{background-color:#78a627;}
+		.lightblue{background-color:#44a0c7;}
+		.teal{background-color:#499fa0;}
+		.darkblue{background-color:#134689;}
+      
+    </style>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script type="text/javascript" src="touchswipe.js"></script>
+</head>
+
+<body>
+
+	<div id="gamepanel">
+    
+    
+    </div> 
+    
+    <div id="controlpanel">
+    	<div class="content">
+    	<h2>Map Generator</h2>
+        <form id="map-generator" name="map-generator" method="post">
+        	
+            <table width="100%" border="0">
+            	<tr>
+                	<td>Rows</td>
+                    <td><input id="rows" type="text" width="10" value="20"></td>
+                </tr>
+            	<tr>
+                	<td>Tiles</td>
+                    <td><input id="tiles" type="text" width="10" value="20"></td>
+                </tr>
+            	<tr>
+                	<td>Tile Colour</td>
+                    <td><select id="panel-colour"></select></td>
+                </tr>                                
+            </table>
+            <button id="resetMap">Reset Map</button>
+            <hr>
+            <textarea style="width:100%;" rows="20" id="json-output"></textarea>
+            <button id="getJson">Get json</button>
+        </form>
+        </div>
+    </div>
+
+	<script type="text/javascript">
+		
+		$( document ).ready(function() { 
+
+			//DEFAULT
+			var baseTiles = 10;
+			var	baseRows = 10;
+			
+			var tileColours = new Array('grey','black','orange','red','pink','darkgreen','yellow','lightgreen','lightblue','teal','darkblue'); 
+
+			//BUILD INTERFACE
+			for (i = 0; i < tileColours.length; i++) {
+				$('#panel-colour').append('<option value="'+tileColours[i]+'">'+tileColours[i]+'</option>');
+			}
+			
+			//LOAD BASIC MAP
+			createBase(baseRows, baseTiles);
+
+			//ACTIONS
+			$( ".tile" ).click(function() {
+				
+				for (i = 0; i < tileColours.length; i++) {
+					$(this).removeClass(tileColours[i]);
+				}
+				
+				$(this).addClass($('#panel-colour').val());
+			});
+			
+			
+			$("#resetMap").click(function(event){
+				event.preventDefault();
+				
+				baseTiles = $('#tiles').val();
+				baseRows = $('#rows').val();				
+				
+				createBase(baseRows,baseTiles)
+			});		
+
+			$("#getJson").click(function(event){
+				event.preventDefault();
+				
+				createJson();
+			});		
+
+
+
+        });
+		
+		
+		function createBase(rows,tiles){
+			
+			//REMOVE CONTENTS OF THE GAME PANEL
+			$('#gamepanel').html('');
+			
+			//GET TILE WIDTH AND HEIGHT
+			var tileHeight = ($('#gamepanel').height() / (rows)) - 2;
+			var tileWidth = ($('#gamepanel').width() / (tiles)) - 2;
+			//DEFAULT COLOUR
+			var defaultTileColour = 'grey';			
+			
+			//LOOP THROUGH ROWS
+			for (r = 0; r < rows; r++) {
+				//CREATE ROW CONTAINER DIV
+				$('#gamepanel').append('<div id="r'+r+'" class="row">');
+				//LOOP THROUGH COLUMNS
+				for (t = 0; t < tiles; t++) {
+					//ADD TILE TO GAME PANEL
+					$('#r' + r).append('<div id="t'+t+'" class="tile">'+t+'</div>');
+					//ADD BASE COLOUR TO TILE
+					$('#t'+t).addClass(defaultTileColour)
+				}
+				//CLOSE ROW DIV
+				$('#gamepanel').append('</div>');
+				
+			}
+			
+			//SETUP DEFAULTS
+			$('.tile').css({'width':tileWidth,'height':tileHeight});
+			
+			$('#tiles').attr('value', tiles);
+			$('#rows').attr('value', rows);
+			
+		}
+		
+		function createJson(){
+			
+			var jsonString = '[ \n';
+
+			$('.row').each(function( index ) {
+				//START JSON FOR ROW
+				jsonString += '{ \n "row":[ \n';
+				//LOOP THROUGH TILES
+				$('.tile',this).each(function( index ) {
+					//GET CLASSES FROM TILE AND REMOVE TILE KEYWORD
+					var colour = $(this).attr('class').replace('tile','');
+					//CHECK IF COLOUR IS BLANK AND GIVE DEFAULT
+					if(colour == ''){colour = 'grey'};
+					
+					colour = colour.trim();
+									
+					//BUILD JSON FOR TILE
+					jsonString += '{"name":"tile-'+index+'","colour":"'+colour+'"}, \n';	
+				});
+				//END JSON FOR ROW
+				jsonString += '] \n }, \n';
+				//POP COMMON ON IF NOT LAST ROW
+				if($('.row').length > index){
+					//jsonString += ',';
+				}
+			});
+
+			jsonString += ']';
+
+			$('#json-output').val(jsonString);
+			//console.log(JSON.stringify(jsonString));
+
+		}		
+    </script>
+</body>
+</html>
