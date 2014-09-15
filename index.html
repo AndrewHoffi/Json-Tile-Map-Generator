@@ -58,17 +58,17 @@
 			border-color:#0F0;
 		}
 		
-		.black{background-color:#000;}
-		.grey{background-color:#606060;}
+		.black{background-color:#000; color:#FFF;}
+		.grey{background-color:#606060; color:#FFF;}
 		.orange{background-color:#e39030;}
-		.red{background-color:#d2523c;}
+		.red{background-color:#d2523c; color:#FFF;}
 		.pink{background-color:#c43967;}
-		.darkgreen{background-color:#466e2c;}
+		.darkgreen{background-color:#466e2c; color:#FFF;}
 		.yellow{background-color:#d2ca28;}
 		.lightgreen{background-color:#78a627;}
 		.lightblue{background-color:#44a0c7;}
-		.teal{background-color:#499fa0;}
-		.darkblue{background-color:#134689;}
+		.teal{background-color:#499fa0; color:#FFF;}
+		.darkblue{background-color:#134689; color:#FFF;}
       
     </style>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
@@ -83,7 +83,7 @@
     
     <div id="controlpanel">
     	<div class="content">
-    	<h2>Map Generator</h2>
+    	<h2>Map Generator <button id="resetMap">Reset Map</button></h2>
         <form id="map-generator" name="map-generator" method="post">
         	
             <table width="100%" border="0">
@@ -100,28 +100,49 @@
                     <td><select id="panel-colour"></select></td>
                 </tr> 
             	<tr>
-                	<td>Special Tile</td>
+                	<td colspan="2"><hr></td>
+                </tr>                                
+            	<tr>
+                	<td>Action</td>
                     <td>
-                    	<select id="panel-special"></select>
-                    	<select id="panel-special-iteration">
-                        	<option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>                            
-                            <option value="10">10</option>                                                        
+                    	<select id="panel-action"></select>
+                    </td>
+                </tr>
+            	<tr>
+                	<td>Key</td>
+                    <td>
+                    	<select id="panel-key">
+                        	<option></option>
                         </select>
                     </td>
-                </tr>                                                
+                </tr>                
+            	<tr>
+                	<td colspan="2"><hr></td>
+                </tr>                
+            	<tr>
+                	<td>Object</td>
+                    <td><input id="panel-object" type="text" width="50" value=""></td>
+                </tr>
+            	<tr>
+                	<td>Object QTY</td>
+                    <td><input id="panel-object-qty" type="text" width="10" value=""></td>
+                </tr>                
+            	<tr>
+                	<td colspan="2">Contents</td>
+                </tr>
+                <tr>
+                	<td colspan="2"><textarea style="width:100%;" rows="5" id="panel-contents"></textarea></td>
+                </tr>
+            	<tr>
+                	<td colspan="2">Message</td>
+                </tr>
+                <tr>
+                	<td colspan="2"><textarea style="width:100%;" rows="5" id="panel-message"></textarea></td>
+                </tr>
+                                                                
             </table>
-            <button id="resetMap">Reset Map</button>
             <hr>
-            <textarea style="width:100%;" rows="20" id="json-output"></textarea>
+            <textarea style="width:100%;" rows="5" id="json-output"></textarea>
             <button id="getJson">Get json</button>
         </form>
         </div>
@@ -129,23 +150,35 @@
 
 	<script type="text/javascript">
 		
+		function getParameterByName(name) {
+			name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+			var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+				results = regex.exec(location.search);
+			return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+		}		
+		
 		$( document ).ready(function() { 
 
-			//DEFAULT
-			var baseTiles = 10;
-			var	baseRows = 10;
+			if(window.location.href.indexOf("?") > -1) {
+				baseTiles = getParameterByName('tiles');
+				baseRows = getParameterByName('rows');
+			}
 			
-			var tileColours = new Array('grey','black','orange','red','pink','darkgreen','yellow','lightgreen','lightblue','teal','darkblue');
-			var tileSpecials = new Array('','lock','key','door','teleport');			 
+			//DEFAULT
+			baseTiles = typeof baseTiles !== 'undefined' ? baseTiles : 10;
+			baseRows = typeof baseRows !== 'undefined' ? baseRows : 10;
+			
+			var tileColours = new Array('black','grey','orange','red','pink','darkgreen','yellow','lightgreen','lightblue','teal','darkblue');
+			var tileActions = new Array('','start','end','wildcard','gatekeeper','key','door','teleport');			 
 
 			//BUILD INTERFACE
 			for (i = 0; i < tileColours.length; i++) {
 				$('#panel-colour').append('<option value="'+tileColours[i]+'">'+tileColours[i]+'</option>');
 			}
 			
-			for (i = 0; i < tileSpecials.length; i++) {
-				$('#panel-special').append('<option value="'+tileSpecials[i]+'">'+tileSpecials[i]+'</option>');
-			}			
+			for (i = 0; i < tileActions.length; i++) {
+				$('#panel-action').append('<option value="'+tileActions[i]+'">'+tileActions[i]+'</option>');
+			}						
 			
 			//LOAD BASIC MAP
 			createBase(baseRows, baseTiles);
@@ -159,19 +192,90 @@
 				
 				$(this).addClass($('#panel-colour').val());
 				
-				if($('#panel-special').val() != ''){
-					$(this).html($('#panel-special').val() + $('#panel-special-iteration').val());	
+				//ADD ACTION TO TILE
+				$(this).attr('action',$('#panel-action').val());
+				//ADD KEY TO TILE
+				$(this).attr('key',$('#panel-key').val());				
+				//ADD OBJECT TO TILE
+				$(this).attr('object',$('#panel-object').val());
+				//ADD OBJECT TO TILE
+				$(this).attr('qty',$('#panel-object-qty').val());				
+				//ADD MESSAGE TO TILE
+				$(this).attr('msg',$('#panel-message').val());
+				//ADD CONTENTS TO TILE
+				$(this).attr('contents',$('#panel-contents').val());
+				
+				if($('#panel-action').val()){	
+					if($('#panel-action').val() == 'gatekeeper'){
+						$(this).html($('#panel-action').val() + ' ('+$('#panel-key').val()+')' );
+					}else{
+						$(this).html($('#panel-action').val());
+					}
 				}
+				
+				if($('#panel-object').val()){
+					
+					$(this).html($('#panel-object').val());
+					
+					var objectExists = false;
+					//LOOP THROUGH THE KEY SELECT AND CHECK IF THE OBJECT EXISTS IF NOT ADD IT
+					$("#panel-key > option").each(function(i,obj) {
+						if(obj.value == $('#panel-object').val()){
+							objectExists = true;
+						}
+					});	
+					
+					if(!objectExists){
+						$("#panel-key").append('<option value="'+$('#panel-object').val()+'">'+$('#panel-object').val()+'</option>')
+					}
+				}
+				
+				//CLEAR EVERYTHING EXCEPT THE COLOUR
+				//RESET OBJECT
+				$('#panel-object').attr('value',null);
+				//RESET QTY
+				$('#panel-object-qty').val() = '';
+				//RESET CONTENTS
+				$('#panel-contents').val() = '';
+				//RESET MSG
+				$('#panel-message').val() = '';
+				//RESET ACTION
+				//$("#panel-action option").val([]);
+				
+				$("#panel-action").html('');			
+
+			//BUILD INTERFACE		
+			for (i = 0; i < tileActions.length; i++) {
+				$('#panel-action').append('<option value="'+tileActions[i]+'">'+tileActions[i]+'</option>');
+			}
+				
+				//RESET KEY
+				$("#panel-key option").val([]);
+
+				
+				//$("select").val([]);
+
+				
+
+				
 			});
 			
 			
 			$("#resetMap").click(function(event){
 				event.preventDefault();
 				
-				baseTiles = $('#tiles').val();
-				baseRows = $('#rows').val();				
+				var r = confirm("Are you sure you wish to Reset the Map?");
+				if (r == true) {
+					baseTiles = $('#tiles').val();
+					baseRows = $('#rows').val();				
+					
+					document.location = window.location.href.split('?')[0] + '?tiles=' + baseTiles + '&rows=' + baseRows;
+					//createBase(baseRows,baseTiles)
+				} else {
+					//txt = "You pressed Cancel!";
+				}				
 				
-				createBase(baseRows,baseTiles)
+
 			});		
 
 			$("#getJson").click(function(event){
@@ -192,7 +296,7 @@
 			
 			//GET TILE WIDTH AND HEIGHT
 			var tileHeight = ($('#gamepanel').height() / (rows)) - 2;
-			var tileWidth = ($('#gamepanel').width() / (tiles)) - 2;
+			var tileWidth = ($('#gamepanel').width() / (tiles)) - 4;
 			//DEFAULT COLOUR
 			var defaultTileColour = 'grey';			
 			
@@ -237,10 +341,41 @@
 					colour = colour.trim();
 					
 					//GET THE ACTION
-					var action = $(this).html();					
+					var action = $(this).attr('action');					
+					//ADD OBJECT TO TILE
+					var object = $(this).attr('object');
+					//ADD OBJECT TO TILE
+					var qty = $(this).attr('qty');				
+					//ADD MESSAGE TO TILE
+					var msg = $(this).attr('msg');
+					//ADD CONTENTS TO TILE
+					var contents = $(this).attr('contents');
 									
 					//BUILD JSON FOR TILE
-					jsonString += '{"name":"tile-'+index+'","colour":"'+colour+'","action":"'+action+'"}, \n';	
+					jsonString += '{"name":"tile-'+index+'"';
+					jsonString += ',"colour":"'+colour+'"';
+					
+					//CHECK ACTION EXISTS
+					if(action !=''){
+						jsonString += ',"action":"'+action+'"';
+					}
+					
+					//CHECK OBJECT EXISTS					
+					if(object != ''){
+						jsonString += ',"object":"'+object+'"';
+					}
+					if(object != '' && qty != ''){
+						jsonString += ',"qty":"'+qty+'"';
+					}
+					//CHECK MSG EXISTS
+					if(msg != '' && action !='gatekeeper'){
+						jsonString += ',"msg":"'+msg+'"';
+					}
+					//CHECK CONTENTS EXISTS					
+					if(contents != ''){
+						jsonString += ',"content":"'+contents+'"';
+					}
+					jsonString += '}, \n';	
 				});
 				//END JSON FOR ROW
 				jsonString += '] \n }, \n';
